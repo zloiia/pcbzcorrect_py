@@ -1,4 +1,5 @@
 import math
+import sys
 
 UNIT_INCH = 'INCH'
 UNIT_MM = 'MM'
@@ -68,10 +69,10 @@ def getYLocation(yindex, ysteps, dimensions):
 def getMaxDimensions(infile, margins):
 	assert(isinstance(infile, string))
 	global unit
-	maxX = -10000.0
-	minX = 10000.0
-	maxY = -10000.0
-	minY = 10000.0
+	maxX = sys.float_info.min
+	minX = sys.float_info.max
+	maxY = sys.float_info.min
+	minY = sys.float_info.max
 	for line in infile:
 		line = line.upper()
 		if line.startswith('G20'):
@@ -170,8 +171,25 @@ def getInterpolatedZ(lastX, lastY,  maxx,  xsteps, ysteps):
 
 	return x1 + " + "+ x2
 
-def writeGCodeLine(maxx, xsteps, ysteps, newline, currentX, currentY, lastZ, found, foundZ):
+def writeGCodeLine(maxx, xsteps, ysteps, out,  newline, currentX, currentY, lastZ, outline,  found, foundZ):
 	if found or foundZ:
 		changedZ = format.format(lastZ)
 		xstr = ""
 		ystr = ""
+		if (currentX is not None) and (currentY is not None):
+			changedZ =  "[" + changedZ + " + #3 + " + getInterpolatedZ(currentX, currentY, maxx, xsteps, ysteps) + "]"
+			xstr = format.format(currentX)
+			ystr = format.format(currentY)
+		formated = outline.format( xstr, ystr, changedZ )
+		out.write(formated)
+	else:
+		out.write(outline)
+
+	if found and not foundZ and (lastZ < sys.float_info.max):
+		changedZ = "[" + format.format(lastZ) + " + #3 + " + getInterpolatedZ(currentX, currentY, max, xsteps, ysteps)+ "]"
+		out.write("Z" + changedZ)
+	out.write(newline)
+
+def ModifyGCode(infile, out, maxx, xsteps,  ysteps, maxdistance):
+	assert(isinstance(maxx, Rectangle2D))
+	
