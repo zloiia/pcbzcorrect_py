@@ -173,3 +173,5 @@ def getInterpolatedZ(lastX, lastY,  maxx,  xsteps, ysteps):
 def writeGCodeLine(maxx, xsteps, ysteps, newline, currentX, currentY, lastZ, found, foundZ):
 	if found or foundZ:
 		changedZ = format.format(lastZ)
+		xstr = ""
+		ystr = ""
