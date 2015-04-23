@@ -1,5 +1,6 @@
 import math
 import sys
+import os
 
 UNIT_INCH = 'INCH'
 UNIT_MM = 'MM'
@@ -192,4 +193,61 @@ def writeGCodeLine(maxx, xsteps, ysteps, out,  newline, currentX, currentY, last
 
 def ModifyGCode(infile, out, maxx, xsteps,  ysteps, maxdistance):
 	assert(isinstance(maxx, Rectangle2D))
-	
+	newline = os.linesep
+	currentX = None
+	currentY = None
+	oldX = None
+	oldY = None
+	lastZ = sys.float_info.max
+	with open(infile, 'r') as inff:
+		for line in inff:
+			tokens = line.split(' ')
+			outline = ''
+			found = False
+			foundZ = False
+			for token in tokens:
+				if token.startswith('G21') and convertToMetric:
+					token = token.replace('G21','G20')
+				else:
+					if token.startswith("X"):
+						oldX = currentX
+						currentX = convert(float(token[1:]))
+						token = 'X{0}'
+						found = True
+					else:
+						if token.startswith("Y"):
+							oldY = currentY
+							currentY = convert(float(token[1:]))
+							token = 'Y{0}'
+							found = True
+						else:
+							if token.startswith('F') and convertToMetric:
+								oldY = currentY
+								currentSpeed = convert(float(token[1:]))
+								token = 'F' + format.format(currentSpeed)
+							else:
+								if token.startswith('Z'):
+									lastZ = convert(float(token[1:]))
+									if currentX is None and currentY is None:
+										if lastZ <0:
+											pass
+											## ERRRROR
+										else:
+											token = 'Z{2}'
+									foundZ = True
+			outline += token + ' '
+			if len(outline)>100:
+				##log error
+				exit(-2)
+		if (lastZ >0) or (oldX is None) or (oldY is None) or not found or (distance(currentX, currentY, oldX, oldY) < maxdistance):
+			writeGCodeLine(max, xsteps, ysteps, out, newline, currentX,currentY, lastZ, outline, found, foundZ)
+		else:
+			count = int(math.ceil(distance(currentX, currentY, oldX, oldY) / maxdistance))
+			out.write("( BROKEN UP INTO " + count + " MOVEMENTS )")
+			out.write(newline)
+			xdist = currentX - oldX
+			ydist = currentY - oldY
+			for i in range(1,count+1):
+				xinterpolated = oldX + i * xdist/count
+				yinterpolated = oldY + i * ydist/count
+				writeGCodeLine(max, xsteps, ysteps, out, newline, xinterpolated,yinterpolated, lastZ, outline, found, foundZ)
