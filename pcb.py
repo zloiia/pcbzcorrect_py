@@ -13,13 +13,6 @@ mach3 = True
 
 lineend = '\n'
 
-params = {
-	'safe_height': 50,
-	'travel_height': 10,
-	'z_offset': 0,
-	'probe_depth': -10
-}
-
 MARGIN = 0
 
 MINVALUE = 0.0001
@@ -134,7 +127,8 @@ def linearInterpolateX(xindex, yindex, xfactor, yFactor, xsteps, ysteps):
 	if xindex == xsteps-1:
 		return (format + '*#{:.0f}').format(yFactor, leftIndex)
 	rightIndex = STARTVARRANGE + xindex + 1 + yindex * xsteps
-	return (format + '*#{:.0f}+'+format+'*#').format( (xfactor * yFactor), rightIndex, ((1 - xfactor) * yFactor), leftIndex )
+	return format.format(xfactor * yFactor) + " * " + "#" + str(rightIndex) + ' + ' + format.format((1 - xfactor) * yFactor) + ' * ' + '#' + str(leftIndex)
+	#return (format + '*#{:.0f}+'+format+'*#').format( (xfactor * yFactor), rightIndex, ((1 - xfactor) * yFactor), leftIndex )
 
 
 def getInterpolatedZ(lastX, lastY,  maxx,  xsteps, ysteps):
@@ -179,7 +173,7 @@ def getInterpolatedZ(lastX, lastY,  maxx,  xsteps, ysteps):
 
 	if yfactor < 0:
 		raise ValueError('yfactor < 0 ')
-	if yfactor > 0:
+	if yfactor > 1:
 		raise ValueError('yfactor > 1')
 
 	x1 = linearInterpolateX(xindex, yindex, xfactor, 1-yfactor ,xsteps, ysteps)
@@ -216,6 +210,7 @@ def ModifyGCode(infile, out, maxx, xsteps,  ysteps, maxdistance):
 	lastZ = sys.float_info.max
 	with open(infile, 'r') as inff:
 		for line in inff:
+			line = line.replace('\n','')
 			tokens = line.split(' ')
 			outline = ''
 			found = False
@@ -268,7 +263,7 @@ def ModifyGCode(infile, out, maxx, xsteps,  ysteps, maxdistance):
 					yinterpolated = oldY + i * ydist/count
 					writeGCodeLine(maxx, xsteps, ysteps, out, newline, xinterpolated,yinterpolated, lastZ, outline, found, foundZ)
 
-def doWork(iinf):
+def doWork(iinf, safe_height = 50, travel_height = 10, z_offset = 0, probe_feedrate = 400, probe_depth = -10):
 	out = cStringIO.StringIO()
 	with open(iinf, 'r') as infile:
 		maxx = getMaxDimensions(infile, MARGIN)
@@ -279,11 +274,11 @@ def doWork(iinf):
 		maxdist = distance(maxx.minX, maxx.minY, maxx.maxX, maxx.maxY / 6)
 		out.write("(Things you can change:)"); out.write(newline)
 		if unit == UNIT_MM:
-			out.write("#1=50		(Safe height)");out.write(newline)
-			out.write("#2=10		(Travel height)");out.write(newline)
-			out.write("#3=0 		(Z offset)");out.write(newline)
-			out.write("#4=-10		(Probe depth)");out.write(newline)
-			out.write("#5=400		(Probe plunge feedrate)");out.write(newline)
+			out.write("#1="+str(safe_height)+"		(Safe height)");out.write(newline)
+			out.write("#2="+str(travel_height)+"		(Travel height)");out.write(newline)
+			out.write("#3="+str(z_offset)+" 		(Z offset)");out.write(newline)
+			out.write("#4="+str(probe_depth)+"		(Probe depth)");out.write(newline)
+			out.write("#5="+str(probe_feedrate)+"		(Probe plunge feedrate)");out.write(newline)
 			out.write("");out.write(newline)
 			out.write("(Things you should not change:)");out.write(newline)
 			out.write("G21		(mm)");out.write(newline)
@@ -331,5 +326,3 @@ def doWork(iinf):
 	ModifyGCode(iinf, out, maxx, xsteps, ysteps, maxdist)
 
 	return out.getvalue()
-
-print doWork("untitled.top.etch.tap")
