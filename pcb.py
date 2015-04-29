@@ -210,7 +210,7 @@ def ModifyGCode(infile, out, maxx, xsteps,  ysteps, maxdistance):
 	lastZ = sys.float_info.max
 	with open(infile, 'r') as inff:
 		for line in inff:
-			line = line.replace('\n','')
+			line = line.replace('\r','')
 			tokens = line.split(' ')
 			outline = ''
 			found = False
@@ -254,7 +254,7 @@ def ModifyGCode(infile, out, maxx, xsteps,  ysteps, maxdistance):
 				writeGCodeLine(maxx, xsteps, ysteps, out, newline, currentX,currentY, lastZ, outline, found, foundZ)
 			else:
 				count = int(math.ceil(distance(currentX, currentY, oldX, oldY) / maxdistance))
-				out.write("( BROKEN UP INTO " + count + " MOVEMENTS )")
+				out.write("( BROKEN UP INTO " + str(count) + " MOVEMENTS )")
 				out.write(newline)
 				xdist = currentX - oldX
 				ydist = currentY - oldY
@@ -271,7 +271,7 @@ def doWork(iinf, safe_height = 50, travel_height = 10, z_offset = 0, probe_feedr
 		#with open(iinf[:-1*len(ext)] + "_zprobed" + ext, 'r') as out:
 		
 		newline = lineend
-		maxdist = distance(maxx.minX, maxx.minY, maxx.maxX, maxx.maxY / 6)
+		maxdist = distance(maxx.minX, maxx.minY, maxx.maxX, maxx.maxY) / 6
 		out.write("(Things you can change:)"); out.write(newline)
 		if unit == UNIT_MM:
 			out.write("#1="+str(safe_height)+"		(Safe height)");out.write(newline)
